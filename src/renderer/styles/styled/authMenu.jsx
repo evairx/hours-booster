@@ -6,7 +6,7 @@ export const Menu = styled.nav`
   align-items:center;
   transition: all 0.2s;
   padding: 1rem;
-  height: 3rem;
+  height: 4rem;
   position:fixed;
   overflow:hidden;
   top:0;

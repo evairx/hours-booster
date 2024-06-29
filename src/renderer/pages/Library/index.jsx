@@ -1,360 +1,399 @@
-import { useState, useEffect } from 'react';
 const { ipcRenderer } = window.require('electron');
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import * as Style from '../../styles/styled/library';
 import { useTranslation } from 'react-i18next';
-import styled from '@emotion/styled';
-import * as Theme from './LibraryUI'
-import '../../styles/steamLevels.css'
+import AuthMenu from '../../components/authMenu';
+import Menu from '../../components/menu';
 
-import Spponsorr from '../../components/Sponsor';
-
-function Sponsor() {
-  const Image = styled.img`
-    position:absolute;
-    bottom:-30px;
-    left:20px;
-    width:180px;
-    height:30px;
-    opacity:.7;
-    transition: all .3s ease-out;
-    cursor:pointer;
-
-    &:hover {
-        opacity:1;
-    }
-  `
-
-  function openSponsor() {
-      const url = 'https://ko-fi.com/evairx';
-      shell.openExternal(url);
-  }
-  
-  return (
-      <>
-          <Image src="/kofi.webp" onClick={openSponsor}/>
-      </>
-  )
-}
-
-const Version = styled.p`
-  color: #8d8d8d;
-  position: absolute;
-  bottom:-38px;
-  right:5px;
-`
+import Clock from '../../icon/clock';
+import Calendary from '../../icon/calendar'
+import Boost from '../../icon/boost'
+import Play from '../../icon/play';
+import SearchIcon from '../../icon/search';
 
 async function openData() {
-  try {
-    let data = await dataInfo();
-    while (data === 'userNotLoggedIn') {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      data = await dataInfo();
-    }
+    try {
+        let data = await dataInfo();
+        while (data === 'userNotLoggedIn') {
+            await new Promise((resolve) => setTimeout(resolve, 1000));
+            data = await dataInfo();
+        }
 
-    sessionStorage.setItem('data', JSON.stringify(data));
-  } catch (error) {
-    console.error(error);
-  }
+        sessionStorage.setItem('data', JSON.stringify(data));
+    } catch (error) {
+        console.error(error);
+    }
 }
 
 function dataInfo() {
-  return new Promise((resolve, reject) => {
-    ipcRenderer.send('dataInfo');
+    return new Promise((resolve, reject) => {
+        ipcRenderer.send('dataInfo');
 
-    ipcRenderer.once('dataInfo', (event, data) => {
-      try {
-        if (data) {
-          resolve(data);
-        } else if (data === 'userNotLoggedIn') {
-          reject(new Error('The user is not logged in'));
-        } else {
-          reject(new Error('Error opening the library window'));
-        }
-      } catch (error) {
-        reject(error);
-      }
+        ipcRenderer.once('dataInfo', (event, data) => {
+            try {
+                if (data) {
+                    resolve(data);
+                } else if (data === 'userNotLoggedIn') {
+                    reject(new Error('The user is not logged in'));
+                } else {
+                    reject(new Error('Error opening the library window'));
+                }
+            } catch (error) {
+                reject(error);
+            }
+        });
     });
-  });
 }
 
-function getLevelClassAndStyle(playerLevel) {
-  const level = parseInt(playerLevel, 10);
-  if (isNaN(level)) {
-    return {
-      className: 'steamLevel',
-      style: {
-        border: '2px solid #9b9b9b',
-        borderRadius: '50%',
-      },
-    };
-  }
+export default function Library() {
+    const { t } = useTranslation();
+    const [games, setGames] = useState([]);
+    const [selectedGames, setSelectedGames] = useState([]);
+    const [avatarUrl, setAvatarUrl] = useState('');
+    const [playerName, setPlayerName] = useState('');
+    const [playerLevel, setPlayerLevel] = useState('');
+    const [gameCount, setGameCount] = useState('');
+    const [loading, setLoading] = useState(true);
+    const [searchText, setSearchText] = useState('');
+    const [boost, setBoost] = useState(false);
+    const [timingCount, setTimingCount] = useState(0);
+    const [userGamesBoosted, setUserGamesBoosted] = useState(0);
+    const [setVisible, setSetVisible] = useState(1);
 
-  let className;
-  let style = {};
-
-  if (level < 100) {
-    style.border = `2px solid ${getColorForSteamLevel(level)}`;
-    style.borderRadius = '50%';
-    className = 'steamLevel';
-  } else {
-    const steamLevel2 = Math.floor((level - 100) / 10);
-    const classIndex = Math.floor((level - 100) / 100) + 2;
-    className = `steamLevel${Math.min(53, classIndex)}`;
-    style.backgroundPosition = `0 ${-32 * (steamLevel2 % 10)}px`;
-  }
-
-  return {
-    className,
-    style,
-  };
-}
-
-function getColorForSteamLevel(level) {
-  const colors = [
-    '#9b9b9b',
-    '#c02942',
-    '#d95b43',
-    '#fecc23',
-    '#467a3c',
-    '#4e8ddb',
-    '#7652c9',
-    '#c252c9',
-    '#542437',
-    '#997c52'
-  ];
-
-  const steamLevel = Math.floor(level / 10);
-
-  return colors[steamLevel % 10];
-}
-
-
-const Library = () => {
-  const [availableGames, setAvailableGames] = useState([]);
-  const [selectedGames, setSelectedGames] = useState([]);
-  const [avatarUrl, setAvatarUrl] = useState('');
-  const [playerName, setPlayerName] = useState('');
-  const [playerLevel, setPlayerLevel] = useState('');
-  const [gameCount, setGameCount] = useState('');
-  const [vacBans, setVacBans] = useState('');
-  const [searchText, setSearchText] = useState('');
-  const [loading, setLoading] = useState(true);
-  const { t } = useTranslation();
-  const navigate = useNavigate();
-
-  const { className, style } = getLevelClassAndStyle(playerLevel);
-
-  useEffect(() => {
-    setLoading(true);
-    openData();
-
-    setTimeout(() => {
-      const existingData = sessionStorage.getItem('data');
+    useEffect(() => {
+        const storedState = localStorage.getItem('state');
+        if (storedState !== null) {
+            setSetVisible(parseInt(storedState));
+        }
+     }, []);
     
-      if (existingData) {
-        const userData = JSON.parse(existingData);
-        const { info, games, infoLevel, data} = userData;
-
-        setAvatarUrl(info.avatar_url_full);
-        setPlayerName(info.player_name);
-        
-        setTimeout(() => {
-          if (games && games.app_count) {
-            setGameCount(games.app_count);
-          } else {
-            console.error("The object 'games' or its property 'app_count' are not defined.");
-          }
-
-          if (infoLevel && Object.keys(infoLevel).length > 0) {
-            const userLevelValue = Object.values(infoLevel)[0]
-            setPlayerLevel(userLevelValue);
-          }
-        }, 500);
-
-        const sortedGames = games.apps.map((game) => ({ ...game, appid: game.appid })).sort((a, b) => a.name.localeCompare(b.name));
-        setAvailableGames(sortedGames);
-
-        if (data.isChecked) {
-          const accounts = JSON.parse(localStorage.getItem('accounts')) || [];
-
-          const duplicateAccount = accounts.find((account) =>
-            account.password === data.password && account.username === data.username
-          );
-
-          if (!duplicateAccount) {
-            accounts.push({
-              password: data.password,
-              username: data.username,
-              avatar_url_full: info.avatar_url_full,
-              player_name: info.player_name,
-            });
-
-            localStorage.setItem('accounts', JSON.stringify(accounts));
-          }
+    useEffect(() => {
+        let interval;
+    
+        if (boost) {
+          interval = setInterval(() => {
+            setTimingCount(prevCount => prevCount + 1);
+          }, 1000);
+        } else {
+          setTimingCount(0);
         }
 
-        setLoading(false);
-      } else {
-        console.log("No data found in sessionStorage.");
-      }
-    }, 2000);
+        return () => clearInterval(interval);
+    }, [boost]);
 
-  }, []);
+    useEffect(() => {
+        setLoading(true);
+        openData();
 
-  const filteredGames = availableGames.filter((game) =>
-    game.name.toLowerCase().includes(searchText.toLowerCase())
-  );
+        setTimeout(() => {
+            const existingData = sessionStorage.getItem('data');
 
-  const moveGame = (game) => {
-    if (selectedGames.length < 33) {
-      const index = availableGames.findIndex((g) => g.appid === game.appid);
-      if (index !== -1) {
-        const updatedAvailableGames = [...availableGames];
-        updatedAvailableGames.splice(index, 1);
-        setSelectedGames([...selectedGames, game]);
-        setAvailableGames(updatedAvailableGames);
-      }
-    } else {
-      alert(t('MaxGames'));
+            if (existingData) {
+                const userData = JSON.parse(existingData);
+                const { info, games, infoLevel, data } = userData;
+
+                setAvatarUrl(info.avatar_url_full);
+                setPlayerName(info.player_name);
+
+                setTimeout(() => {
+                    if (games && games.app_count) {
+                        setGameCount(games.app_count);
+                    } else {
+                        console.error("The object 'games' or its property 'app_count' are not defined.");
+                    }
+
+                    if (infoLevel && Object.keys(infoLevel).length > 0) {
+                        const userLevelValue = Object.values(infoLevel)[0];
+                        setPlayerLevel(userLevelValue);
+                    }
+                }, 500);
+
+                const sortedGames = games.apps.map((game) => ({ ...game, appid: game.appid })).sort((a, b) => a.name.localeCompare(b.name));
+                setGames(sortedGames);
+
+                if (data.isChecked) {
+                    const accounts = JSON.parse(localStorage.getItem('accounts')) || [];
+
+                    const duplicateAccount = accounts.find((account) =>
+                        account.password === data.password && account.username === data.username
+                    );
+
+                    if (!duplicateAccount) {
+                        accounts.push({
+                            password: data.password,
+                            username: data.username,
+                            avatar_url_full: info.avatar_url_full,
+                            player_name: info.player_name,
+                        });
+
+                        localStorage.setItem('accounts', JSON.stringify(accounts));
+                    }
+                }
+
+                setLoading(false);
+            } else {
+                console.log("No data found in sessionStorage.");
+            }
+        }, 2000);
+    }, []);
+
+    function getUserGamesBoosted() {
+        const boostData = JSON.parse(localStorage.getItem('boost')) || [];
+        const userBoostData = boostData.find(entry => entry.user === playerName);
+    
+        if (userBoostData) {
+          setUserGamesBoosted(userBoostData.games);
+        } else {
+          setUserGamesBoosted([]);
+        }
     }
-  };
 
-  const moveGameToAvailable = (game) => {
-    const index = selectedGames.findIndex((g) => g.appid === game.appid);
-    if (index !== -1) {
-      const updatedSelectedGames = [...selectedGames];
-      updatedSelectedGames.splice(index, 1);
-      setAvailableGames([...availableGames, game].sort((a, b) => a.name.localeCompare(b.name)));
-      setSelectedGames(updatedSelectedGames);
+    useEffect(() => {
+        getUserGamesBoosted();
+    }, []);
+
+    const handleSearchChange = (event) => {
+        setSearchText(event.target.value);
+    };
+
+    const handleAddRemoveGame = (appid) => {
+        setSelectedGames((prevSelectedGames) => {
+            if (prevSelectedGames.includes(appid)) {
+                return prevSelectedGames.filter((id) => id !== appid);
+            } else {
+                return [...prevSelectedGames, appid];
+            }
+        });
+    };
+
+    const filteredGames = games.filter((game) =>
+        game.name.toLowerCase().includes(searchText.toLowerCase())
+    );
+
+    function formatUnixTimestamp(unixTimestamp) {
+        let date = new Date(unixTimestamp * 1000);
+        const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+        let day = date.getDate();
+
+        let month = monthNames[date.getMonth()];
+
+        let year = date.getFullYear();
+
+        return `${day} ${month} ${year}`;
     }
-  };
 
-  const handleRunBooster = () => {
-    const selectedGameIds = selectedGames.map((game) => game.appid);
+    function formatPlaytime(playtimeInMinutes) {
+        let playtimeInHours = playtimeInMinutes / 60;
 
-    if (selectedGameIds.length === 0) {
-      alert(t('MinGames'));
-    } else {
-
-      if (sessionStorage.getItem('games')) {
-        sessionStorage.removeItem('games');
-      }
-      sessionStorage.setItem('games', JSON.stringify(selectedGameIds));
-
-      ipcRenderer.send('start-boost', selectedGameIds);
-
-      navigate('/boosting')
+        let roundedPlaytime = playtimeInHours.toFixed(1);
+        if (roundedPlaytime.endsWith('.0')) {
+            return Math.floor(playtimeInHours).toString();
+        }
+        return roundedPlaytime;
     }
-  };
 
-  const displaySelectedGames = () => {
-    return selectedGames.map((game) => (
-      <Theme.GamesList key={game.appid} onClick={() => moveGameToAvailable(game)}>
-        <img
-          src={game.img_icon_url}
-          className="poster"
-          style={{ maxWidth: '64px' }}
-          draggable={false}
-          alt=""
-        />
-        <div className="contentGames">
-          <p>{game.name}</p>
-          <p className="hours">{(game.playtime_forever / 60).toFixed(1)} {t('Played')}</p>
-        </div>
-      </Theme.GamesList>
-    ));
-  };
+    const formatTimingCount = (seconds) => {
+        const hrs = Math.floor(seconds / 3600);
+        const mins = Math.floor((seconds % 3600) / 60);
+        const secs = seconds % 60;
+    
+        return `${hrs}:${mins < 10 ? '0' : ''}${mins}:${secs < 10 ? '0' : ''}${secs}`;
+    };
 
-  const displayAvailableGames = () => {
-    return filteredGames.map((game) => (
-      <>
-      {game.img_icon_url && <Theme.GamesList key={game.appid} onClick={() => moveGame(game)}>
-        <img
-          src={game.img_icon_url}
-          className="poster"
-          style={{ maxWidth: '64px' }}
-          draggable={false}
-          alt=""
-        />
-        <div className="contentGames">
-          <p>{game.name}</p>
-          <p className="hours">{(game.playtime_forever / 60).toFixed(1)} {t('Played')}</p>
-        </div>
-      </Theme.GamesList>}
-      </>
-    ));
-  };
+    const handleVisible = () => {
+        if (setVisible === 1) {
+            setSetVisible(0);
+            localStorage.setItem('state', 0);
+        } else {
+            setSetVisible(1);
+            localStorage.setItem('state', 1);
+        }
+    }
 
-  return (
-    <>
-    {loading ?
-      <Theme.ContainerLoad>
-        <main>
-          <Theme.ContentLoad>
-            <Theme.Loading/>
-          </Theme.ContentLoad>
-          <p className="titleLoad">{t('LoadData')}</p>
-        </main>
-        <Spponsorr/>
-      </Theme.ContainerLoad>
-      :
-      <Theme.Container>
-        <Theme.Header>
-          {avatarUrl ? <img src={avatarUrl} className="avatar" alt="" />:<img src="https://avatars.akamai.steamstatic.com/fef49e7fa7e1997310d705b2a6158ff8dc1cdfeb_full.jpg" className="avatar" alt="" />}
-          {playerName ? <div>
-            <div className="playerName">
-              {playerName}
-              <div className={className} style={style}>
-                <span className="level-number">{playerLevel}</span>
-              </div>
-            </div>
-            <p className="countGames">{gameCount} {t('GamesOwned')}</p>
-          </div>:<div>Not Data found</div>}
-        </Theme.Header>
-        <div>
-          <Theme.ContainerGames >
-            <div>
-              <Theme.Box>
-                <Theme.HeaderBox>
-                  <p className="box-title">{t('Library')}</p>
-                  <div className="right-content">
-                    <div className="searchContent">
-                      <input
-                        type="text"
-                        className="search"
-                        value={searchText}
-                        onChange={(e) => setSearchText(e.target.value)}
-                        placeholder={t('Search')}
-                      />
-                      <div className="searchIco"></div>
-                    </div>
-                  </div>
-                </Theme.HeaderBox>
-                <Theme.Space/>
-                <ul className="list-games-ul">{displayAvailableGames()}</ul>
-              </Theme.Box>
+    const handleBoost = () => {
+        ipcRenderer.send('start-boost', { selectedGames, setVisible });
 
-              <Theme.Box>
-                <Theme.HeaderBox>
-                  <p className="box-title">{t('Selected')}</p>
-                </Theme.HeaderBox>
-                <Theme.Space/>
-                <ul className="list-games-ul">{displaySelectedGames()}</ul>
-              </Theme.Box>
+        if (boost) {
+            let boostData = JSON.parse(localStorage.getItem('boost')) || [];
+      
+            selectedGames.forEach(selectedAppid => {
+              let userEntry = boostData.find(entry => entry.user === playerName);
+      
+              if (!userEntry) {
+                userEntry = {
+                  user: playerName,
+                  games: []
+                };
+                boostData.push(userEntry);
+              }
+      
+              let gameEntry = userEntry.games.find(g => g.appid === selectedAppid);
+      
+              if (!gameEntry) {
+                gameEntry = {
+                  appid: selectedAppid,
+                  timing: 0
+                };
+                userEntry.games.push(gameEntry);
+              }
+      
+              // Sumar el tiempo acumulado al existente
+              gameEntry.timing += timingCount;
+            });
+      
+            localStorage.setItem('boost', JSON.stringify(boostData));
+        }
+  
+        setBoost(!boost);
+        setTimingCount(0);
+        getUserGamesBoosted();
+    };
 
-            </div>
-          </Theme.ContainerGames>
-          <Theme.ButtonContainer>
-            <Theme.Button onClick={handleRunBooster}>
-              {t('Run')}
-            </Theme.Button>
-          </Theme.ButtonContainer>
-        </div>
-        <Version>v0.4.5</Version>
-        <Sponsor/>
-      </Theme.Container>}
-    </>
-  );
-};
+    const handleBoostStop = () => {
+        ipcRenderer.send('stop-boost', setVisible);
 
-export default Library;
+        setBoost(!boost);
+        setTimingCount(0);
+        getUserGamesBoosted();
+    }
+
+    const formatTiming = (seconds) => {
+        if (seconds < 60) {
+          return `${seconds} segundos`;
+        } else if (seconds < 3600) {
+          const minutes = Math.floor(seconds / 60);
+          return `${minutes} minuto${minutes !== 1 ? 's' : ''}`;
+        } else {
+          const hours = Math.floor(seconds / 3600);
+          const remainingMinutes = Math.floor((seconds % 3600) / 60);
+          return `${hours} hora${hours !== 1 ? 's' : ''}, ${remainingMinutes} minuto${remainingMinutes !== 1 ? 's' : ''}`;
+        }
+    };
+
+    const getTimingById = (id) => {
+        const game = userGamesBoosted.find(game => game.appid === id);
+        return game ? game.timing : 0;
+    };
+
+    return (
+        <>
+            {loading ? (
+                <Style.LoadingContent>
+                    <AuthMenu />
+                    <Style.Loading />
+                </Style.LoadingContent>
+            ) : (
+                <>
+                    <Menu name={playerName} avatar={avatarUrl} boost={boost} handleVisible={handleVisible} setVisible={setVisible}/>
+                    <Style.SubMenu>
+                        <div style={{position: 'relative'}}>
+                            <Style.Search
+                                type="text"
+                                value={searchText}
+                                onChange={handleSearchChange}
+                                placeholder={`${t('Search')}`}
+                            />
+                            <div style={{position: 'absolute', right: 5, top: 5}}>
+                                <SearchIcon/>
+                            </div>
+                        </div>
+                        {boost ? (
+                            <Style.BoostStopBtn onClick={handleBoostStop}>
+                                {t('Stop').toUpperCase()}
+                            </Style.BoostStopBtn>
+                        ):(
+                            selectedGames.length != 0 ? (
+                                <Style.BoostBtn onClick={handleBoost}>
+                                    <Play/>
+                                    {t('Run').toUpperCase()}
+                                </Style.BoostBtn>
+                            ):(
+                                <Style.BoostBtnDisabled disabled>
+                                    <Play/>
+                                    {t('Run').toUpperCase()}
+                                </Style.BoostBtnDisabled>
+                            )
+                        )}
+                    </Style.SubMenu>
+                    <Style.Space />
+                    <Style.Content>
+                        <Style.Header>
+                            <Style.Counts>{t('AllGames').toUpperCase()} ({gameCount ? gameCount : '0'})</Style.Counts>
+                            <Style.Counts>{t('Selected').toUpperCase()} ({selectedGames.length})</Style.Counts>
+                        </Style.Header>
+                        <Style.Container>
+                            <Style.ContentGames>
+                                {filteredGames.map((game, index) => {
+                                    const isSelected = selectedGames.includes(game.appid);
+
+                                    return (
+                                        <Style.Card key={index}>
+                                            <Style.Poster src={`https://steamcdn-a.akamaihd.net/steam/apps/${game.appid}/header.jpg`} draggable="false" alt={game.name} />
+                                            <Style.RelativeContent>
+                                                <Style.Name>{game.name}</Style.Name>
+                                                <Style.CardContent>
+                                                {boost ? (
+                                                    isSelected ? (
+                                                        <Style.RunningButton>
+                                                            Running
+                                                        </Style.RunningButton>
+                                                    ) : (
+                                                        <Style.AddButtonDisabled disabled>
+                                                            Select
+                                                        </Style.AddButtonDisabled>
+                                                    )
+                                                ) : (
+                                                    isSelected ? (
+                                                        <Style.RemoveButton onClick={() => handleAddRemoveGame(game.appid)}>
+                                                            Remove
+                                                        </Style.RemoveButton>
+                                                    ) : (
+                                                        <Style.AddButton onClick={() => handleAddRemoveGame(game.appid)}>
+                                                            Select
+                                                        </Style.AddButton>
+                                                    )
+                                                )}
+                                                    <Style.Tag>
+                                                        <Style.TagIcon>
+                                                            <Calendary />
+                                                        </Style.TagIcon>
+                                                        <Style.TagContent>
+                                                            <Style.TagTitle>{t('LastPlayed').toUpperCase()}</Style.TagTitle>
+                                                            <Style.TagText>{formatUnixTimestamp(game.rtime_last_played)}</Style.TagText>
+                                                        </Style.TagContent>
+                                                    </Style.Tag>
+                                                    <Style.Tag>
+                                                        <Style.TagIcon>
+                                                            <Clock />
+                                                        </Style.TagIcon>
+                                                        <Style.TagContent>
+                                                            <Style.TagTitle>{t('PlayTime').toUpperCase()}</Style.TagTitle>
+                                                            <Style.TagText>{formatPlaytime(game.playtime_forever)} {t('HoursPlayed')}</Style.TagText>
+                                                        </Style.TagContent>
+                                                    </Style.Tag>
+                                                    <Style.Tag>
+                                                        <Style.TagIcon>
+                                                            <Boost />
+                                                        </Style.TagIcon>
+                                                        <Style.TagContent>
+                                                            <Style.TagTitle>{t('BoostTime').toUpperCase()}</Style.TagTitle>
+                                                            <Style.TagText>{formatTiming(getTimingById(game.appid))}</Style.TagText>
+                                                        </Style.TagContent>
+                                                    </Style.Tag>
+                                                </Style.CardContent>
+                                            </Style.RelativeContent>
+                                        </Style.Card>
+                                    );
+                                })}
+                            </Style.ContentGames>
+                        </Style.Container>
+                        <Style.BoostTimingContent style={{bottom: boost ? '20px': '-65px'}}>
+                            <p>{formatTimingCount(timingCount)}</p>
+                        </Style.BoostTimingContent>
+                    </Style.Content>
+                </>
+            )}
+        </>
+    );
+}

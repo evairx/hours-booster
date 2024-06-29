@@ -1,6 +1,5 @@
-const { app, BrowserWindow, ipcMain, dialog, shell, ipcRenderer } = require('electron');
+const { app, BrowserWindow, ipcMain } = require('electron');
 const steamUser = require('steam-user');
-const packageJson = require('../../package.json');
 const config = require('../../config')
 
 let mainWindow;
@@ -16,6 +15,7 @@ function createMainWindow() {
       height: 720,
       resizable: false,
       fullscreenable: false,
+      frame: false,
       webPreferences: {
         nodeIntegration: true,
         contextIsolation: false,
@@ -120,7 +120,6 @@ function handleFormData(data) {
       let levelSent = false;
       let gamesSent = false;
 
-
       ipcMain.on('dataInfo', (event) => {
         if (!infoSent && !levelSent && !gamesSent) {
           event.sender.send('dataInfo', 'userNotLoggedIn');
@@ -159,24 +158,23 @@ function handleFormData(data) {
       });
 
       userLoggedIn = true;
+      
+      ipcMain.on('start-boost', (event, data) => {
+        console.log('start boost');
+        const games = data.selectedGames;
+        const visible = data.setVisible;
 
-      ipcMain.on('start-boost', (event, selectedGameIds) => {
-        console.log(selectedGameIds);
-
-        user.setPersona(0);
-
-        user.gamesPlayed(selectedGameIds, () => {
-          event.sender.send('boost-started');
-        });
+        user.setPersona(visible);
+        user.gamesPlayed(games);
       });
       
-      ipcMain.on('stop-boost', (event) => {
+      ipcMain.on('stop-boost', (event, data) => {
         console.log('stopped boost');
-        user.setPersona(1);
-      
-        user.gamesPlayed([], () => {
-          event.sender.send('boost-stopped');
-        });
+
+        const visible = data.setVisible;
+
+        user.setPersona(visible);
+        user.gamesPlayed([]);
       });
      }
   })
@@ -192,7 +190,7 @@ function handleSteamError(err) {
     },
   };
 
-  const { title, message } = errorMessages[err.message] || errorMessages['InvalidPassword'];
+  const { title } = errorMessages[err.message] || errorMessages['InvalidPassword'];
   if (mainWindow) {
     mainWindow.webContents.send('error-occurred',title);
   }

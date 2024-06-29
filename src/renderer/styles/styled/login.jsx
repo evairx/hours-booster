@@ -146,15 +146,15 @@ export const Submit = styled.button`
     height: 40px;
     border: none;
     border-radius: 6px;
-    background: linear-gradient(to right, #06BFFF, #2D74FF);
-    color: #fff;
+    background: #66C0F4;
+    color: #000;
     font-size: 1.3rem;
     font-weight: 600;
     transition: all 0.3s ease-in-out;
     cursor: pointer;
     
     &:hover {
-        background: linear-gradient(to right, #6ddaff, #518bff);
+        background: #92d7fe;
     }
 `
 
@@ -171,7 +171,7 @@ export const  SubmitDisabled = styled.button`
     height: 40px;
     border: none;
     border-radius: 6px;
-    background: linear-gradient(to right, #06BFFF, #2D74FF);
+    background: #4B619B;
     color: #fff;
     font-size: 1.3rem;
     font-weight: 600;
@@ -237,6 +237,8 @@ export const Settings = styled.div`
     border-radius: 6px;
     transition: all 0.2s ease-in-out;
     padding: 1rem 0.5rem;
+    backdrop-filter: blur(5px);
+    z-index: 999;
 `
 
 export const SettignTitle = styled.p`
@@ -295,5 +297,17 @@ export const Btn = styled.button`
 
     &:hover {
         background-color: #384151;
+    }
+`
+
+export const Git = styled.a`
+    position: absolute;
+    bottom: 100px;
+    right: 39px;
+    opacity: 0.3;
+    transition: all .3s ease-in-out;
+
+    &:hover {
+        opacity:1;
     }
 `

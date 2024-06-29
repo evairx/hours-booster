@@ -8,6 +8,7 @@ import i18n from '../../../../../i18n';
 import Logo from '../../../icon/logo'
 import SettingsIcon from '../../../icon/settings'
 import BackIcon from '../../../icon/back'
+import Github from '../../../components/github';
 
 import AuthMenu from '../../../components/authMenu';
 
@@ -309,7 +310,7 @@ export default function login() {
                         )}
                     </Style.LoginContent>
                 </Style.Content>
-                <Style.Settings style={{opacity: openSettings ? '1': '0'}}>
+                <Style.Settings style={{opacity: openSettings ? '1': '0', pointerEvents: openSettings ? 'auto': 'none'}}>
                     {lang ? (
                       <>
                         <Style.SettignTitle>{t('Settings')}:</Style.SettignTitle>
@@ -342,6 +343,9 @@ export default function login() {
                       </>
                     )}
                 </Style.Settings>
+                <Style.Git>
+                  <Github/>
+                </Style.Git>
                 <Style.SettingsBtn onClick={HandleSettings}>
                     <SettingsIcon/>
                 </Style.SettingsBtn>
