@@ -214,6 +214,42 @@ export default function Library() {
     const handleBoost = () => {
         ipcRenderer.send('start-boost', { selectedGames, setVisible });
 
+        let boostData = JSON.parse(localStorage.getItem('boost')) || [];
+
+        selectedGames.forEach(selectedAppid => {
+            let userEntry = boostData.find(entry => entry.user === playerName);
+        
+            if (!userEntry) {
+                userEntry = {
+                    user: playerName,
+                    games: []
+                };
+                boostData.push(userEntry);
+            }
+        
+            let gameEntry = userEntry.games.find(g => g.appid === selectedAppid);
+        
+            if (!gameEntry) {
+                gameEntry = {
+                    appid: selectedAppid,
+                    timing: 0
+                };
+                userEntry.games.push(gameEntry);
+            }
+        
+            gameEntry.timing += timingCount;
+        });
+      
+        localStorage.setItem('boost', JSON.stringify(boostData));
+  
+        setBoost(!boost);
+        getUserGamesBoosted();
+    };
+
+    const handleBoostStop = () => {
+        ipcRenderer.send('stop-boost', setVisible);
+
+        
         if (boost) {
             let boostData = JSON.parse(localStorage.getItem('boost')) || [];
       
@@ -244,14 +280,6 @@ export default function Library() {
       
             localStorage.setItem('boost', JSON.stringify(boostData));
         }
-  
-        setBoost(!boost);
-        setTimingCount(0);
-        getUserGamesBoosted();
-    };
-
-    const handleBoostStop = () => {
-        ipcRenderer.send('stop-boost', setVisible);
 
         setBoost(!boost);
         setTimingCount(0);
