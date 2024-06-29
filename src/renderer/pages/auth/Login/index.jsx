@@ -244,7 +244,7 @@ export default function login() {
                 <Style.Overlay />
                 <Style.Background>
                     <picture>
-                        <Style.Img src="/bg.jpg" alt="background" />
+                        <Style.Img src="https://store.akamai.steamstatic.com/public/shared/images/joinsteam/new_login_bg_strong_mask.jpg" alt="background" />
                     </picture>
                 </Style.Background>
                 <Style.Content>
