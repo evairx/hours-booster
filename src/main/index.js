@@ -1,5 +1,6 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
 const steamUser = require('steam-user');
+const { join } = require('path');
 const config = require('../../config')
 
 let mainWindow;
@@ -7,6 +8,8 @@ let mainWindow;
 app.name = 'Hours Booster';
 
 const url = config.VITE_DEV_SERVER_UR
+
+const ico = join(__dirname, '../../public', 'icon.ico');
 
 function createMainWindow() {
 
@@ -16,6 +19,7 @@ function createMainWindow() {
       resizable: false,
       fullscreenable: false,
       frame: false,
+      icon: ico,
       webPreferences: {
         nodeIntegration: true,
         contextIsolation: false,
@@ -103,7 +107,6 @@ function handleFormData(data) {
   function openSteamGuardCodeWindow(domain, callback) {
     console.log('open steamGuardCodeWindow')
     steamGuardIn = true;
-    console.log(steamGuardIn)
     ipcMain.on('submit-code', (event, enteredCode) => {
       callback(enteredCode);
     });

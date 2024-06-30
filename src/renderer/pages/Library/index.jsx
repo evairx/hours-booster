@@ -382,7 +382,7 @@ export default function Library() {
                                                         </Style.AddButton>
                                                     )
                                                 )}
-                                                    <Style.Tag>
+                                                    {game.rtime_last_played != 0 && <Style.Tag>
                                                         <Style.TagIcon>
                                                             <Calendary />
                                                         </Style.TagIcon>
@@ -390,7 +390,7 @@ export default function Library() {
                                                             <Style.TagTitle>{t('LastPlayed').toUpperCase()}</Style.TagTitle>
                                                             <Style.TagText>{formatUnixTimestamp(game.rtime_last_played)}</Style.TagText>
                                                         </Style.TagContent>
-                                                    </Style.Tag>
+                                                    </Style.Tag>}
                                                     <Style.Tag>
                                                         <Style.TagIcon>
                                                             <Clock />

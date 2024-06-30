@@ -83,6 +83,7 @@ function SteamGuard() {
       if (enteredCode) {
         setIsLoading(true);
         ipcRenderer.send('submit-code', enteredCode);
+  
         handleOpenLibrary()
       }
     };
@@ -111,9 +112,9 @@ function SteamGuard() {
                     </Style.LoadingContent>
                 ):(
                     codeLenght === 5 ? (
-                        <Style.Submit type="submit">{t('EnterBtn').toUpperCase()}</Style.Submit>
+                        <Style.Submit onClick={handleSubmit}>{t('EnterBtn').toUpperCase()}</Style.Submit>
                     ) : (
-                        <Style.SubmitDisabled type="button" disabled>{t('EnterBtn').toUpperCase()}</Style.SubmitDisabled>
+                        <Style.SubmitDisabled disabled>{t('EnterBtn').toUpperCase()}</Style.SubmitDisabled>
                     )
                 )}
             </Style.InputContent>
